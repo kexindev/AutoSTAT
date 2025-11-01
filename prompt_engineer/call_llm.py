@@ -34,54 +34,86 @@ class LLMClient:
         )
 
         try:
-            if model_name == "GPT-4o" or model_name == "GPT-5" or model_name == "DeepSeek" or model_name == "通义千问" or model_name == "Claude" or model_name == "豆包":
+            # 获取 API 类型
+            api_type = config.get("api_type", "openai")
+            
+            # 根据 API 类型选择不同的调用方式
+            if api_type == "openai":
+                # OpenAI 兼容的 API（包括 OpenAI、DeepSeek、通义千问、豆包等）
                 try:
                     client = OpenAI(
                         api_key=api_key,
-                        base_url=config["api_base"]
+                        base_url=config.get("api_base", "https://api.openai.com/v1")
                     )
                     
-                    # 使用新的 API 调用方式
                     resp = client.chat.completions.create(
-                        model=config["model_name"],
+                        model=config.get("model_name", "gpt-4o"),
                         messages=[
                             {"role": "system", "content": system_msg},
                             {"role": "user", "content": prompt},
                         ],
-                        stream = False
+                        stream=False
                     )
                     return resp.choices[0].message.content
                 
                 except OpenAIError as e:
-                    # 这里可以捕获所有OpenAI SDK定义的错误
-                    st.error(f"API调用失败: {str(e)}")
-                    # 记录日志或提示用户
+                    st.error(f"API 调用失败: {str(e)}")
                     return "调用失败，请检查密钥或网络"
                 except Exception as e:
-                    # 捕获其他非预期的异常，如网络问题
+                    st.error(f"发生未知错误: {str(e)}")
+                    return "发生未知错误"
+            
+            elif api_type == "claude":
+                # Claude 使用 Anthropic SDK
+                try:
+                    client = Anthropic(api_key=api_key)
+                    
+                    response = client.messages.create(
+                        model=config.get("model_name", "claude-3-5-sonnet-latest"),
+                        max_tokens=4096,
+                        system=system_msg,
+                        messages=[
+                            {"role": "user", "content": prompt}
+                        ]
+                    )
+                    
+                    return response.content[0].text
+                
+                except AnthropicError as e:
+                    st.error(f"Claude API 调用失败: {str(e)}")
+                    return "调用失败，请检查密钥或网络"
+                except Exception as e:
                     st.error(f"发生未知错误: {str(e)}")
                     return "发生未知错误"
 
-            elif model_name == "智谱AI":
-                client = ZhipuAiClient(api_key=api_key)
-                response = client.chat.completions.create(
-                    model=config["model_name"],
-                    messages=[{"role": "system", "content": "你是一个专业的数据分析助手。"},
-                        {"role": "user", "content": prompt}],
-                    thinking={
-                        "type":"enabled"
-                    }
-                )
-                if response:
-                    print(response.choices[0].message)
-                    desc = response.choices[0].message.content if hasattr(response.choices[0].message, "content") else str(response.choices[0].message)
-                    return desc.replace("<|begin_of_box|>", "").replace("<|end_of_box|>", "").strip()
+            elif api_type == "zhipu":
+                # 智谱 AI 使用自己的客户端
+                try:
+                    client = ZhipuAiClient(api_key=api_key)
+                    
+                    response = client.chat.completions.create(
+                        model=config.get("model_name", "glm-4v-plus-0111"),
+                        messages=[
+                            {"role": "system", "content": system_msg},
+                            {"role": "user", "content": prompt}
+                        ],
+                        thinking={"type": "enabled"}
+                    )
+                    if response:
+                        desc = response.choices[0].message.content if hasattr(
+                            response.choices[0].message, "content"
+                        ) else str(response.choices[0].message)
+                        return desc.replace("<|begin_of_box|>", "").replace("<|end_of_box|>", "").strip()
 
-                st.error(f"智谱调用失败：{response.text}")
-                return "调用失败，请检查密钥或网络"
+                    st.error(f"智谱 API 调用失败：{response.text}")
+                    return "调用失败，请检查密钥或网络"
+                
+                except Exception as e:
+                    st.error(f"智谱 API 调用异常：{e}")
+                    return "调用失败，请检查密钥或网络"
 
             else:
-                return f"暂不支持模型：{model_name}"
+                return f"不支持的 API 类型：{api_type}"
 
         except Exception as e:
             st.error(f"{model_name} 调用异常：{e}")
