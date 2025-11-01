@@ -12,6 +12,7 @@
 [<a href="https://github.com/Jiaye-s-Group/AutoSTAT/releases/download/v1.0.0_mac/AutoSTAT-1.0.0-mac.zip">Download Mac</a>]
 [<a href="https://github.com/Jiaye-s-Group/AutoSTAT/releases/download/v1.0.0_win/AutoSTAT-1.0.0-win64.zip">Download Win</a>]
 [<a href="https://github.com/Jiaye-s-Group/AutoSTAT/blob/master/README_eng.md">README Eng</a>]
+[<a href="https://github.com/Jiaye-s-Group/AutoSTAT/blob/master/logo/wechatgroup.png">WeChat</a>]
 <br>
 
 
@@ -21,6 +22,9 @@ AutoSTAT，致力于成为用户数据分析的 copilot 。
 
 
 ## What's New:
+
+***11/01/2025***
+  1. 我们建立了一个[微信讨论群](https://github.com/Jiaye-s-Group/AutoSTAT/blob/master/logo/wechatgroup.png)，欢迎大家一起来玩！
 
 ***10/31/2025***
   1. 发布版本 AutoSTAT v1.0.0 🎉

@@ -51,3 +51,4 @@ mammoth==1.10.0
 # Utilities
 typing-extensions==4.14.1
 stqdm==0.0.5
+openpyxl==3.1.5

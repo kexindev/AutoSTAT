@@ -13,6 +13,7 @@
 [<a href="https://autostat.cc">Web</a>]
 [<a href="https://github.com/Jiaye-s-Group/AutoSTAT/releases/download/v1.0.0_mac/AutoSTAT-1.0.0-mac.zip">Download Mac</a>]
 [<a href="https://github.com/Jiaye-s-Group/AutoSTAT/releases/download/v1.0.0_win/AutoSTAT-1.0.0-win64.zip">Download Win</a>]
+[<a href="https://github.com/Jiaye-s-Group/AutoSTAT/blob/master/logo/wechatgroup.png">WeChat</a>]
 <br>
 
 Autostat is dedicated to becoming your copilot in data analysis.
@@ -21,6 +22,9 @@ We are building a beginner-friendly framework that covers the end-to-end data an
 
 
 ## What's New:
+
+***11/01/2025***
+1. A [WeChat](https://github.com/Jiaye-s-Group/AutoSTAT/blob/master/logo/wechatgroup.png) group is now available. Feel free to join us!
 
 ***10/31/2025***
 1. Released AutoSTAT v1.0.0 🎉
