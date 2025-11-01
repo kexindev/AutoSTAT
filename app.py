@@ -150,11 +150,6 @@ def run_app():
             # 显示 OpenAI API 兼容模型的配置界面
             existing_config = st.session_state.model_configs_runtime.get(CUSTOM_MODEL_KEY, {})
             
-            if existing_config and existing_config.get("api_base"):
-                st.info(f"当前配置: {existing_config.get('model_name', 'N/A')}")
-            else:
-                st.info("配置 OpenAI API 兼容模型")
-            
             base_url_input = st.text_input(
                 "Base URL",
                 value=existing_config.get("api_base", ""),
@@ -175,6 +170,11 @@ def run_app():
                 type="password",
                 key="api_key_input",
             )
+            
+            if existing_config and existing_config.get("api_base"):
+                st.info(f"当前配置: {existing_config.get('model_name', 'N/A')}")
+            else:
+                st.info("配置 OpenAI API 兼容模型")
             
             if st.button("💾 保存配置", use_container_width=True, key="save_key"):
                 if not base_url_input or not model_name_input or not api_key_input:
