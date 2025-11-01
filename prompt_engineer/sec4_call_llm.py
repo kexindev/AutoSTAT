@@ -218,6 +218,7 @@ class ModelingCodingAgent(LLMClient):
             }},
             // 如模型过大，可选 "artifact_warning": <int 字节大小>
             // 以及用户在 Requirement 中提出的其他字段
+            // 除最终评估指标外，脚本必须在 result_dict 中加入 intermediate 字段，用于存放模型中间结果（如线性回归系数、预测值、残差、特征重要性、交叉验证细节等）。
         }}
         5) 确保所有数值均为 Python 原生类型（float、int），字段名严格为 models、best_model、artifacts；如果用户有额外需求，如记录训练时间、特征重要性等，也请加入 result_dict。
         6) 模型导出：训练完毕后，将选定的 best_model 用 pickle 序列化并 gzip 压缩，再 base64 编码；把编码字符串和格式信息填入 result_dict["artifacts"]，并确保最终 result_dict 可 JSON 序列化。
@@ -283,6 +284,7 @@ class ModelingCodingAgent(LLMClient):
                 - 模型类型（分类 / 回归）；
                 - 主要性能指标（如准确率、R²、MAE、MSE 等），每个指标保留 4 位小数；
                 - 建议使用表格或分点列表清晰呈现。
+                - intermediate 用于存放模型中间结果（如线性回归系数、预测值、残差、特征重要性、交叉验证细节)，请深入讲解
                 3. 明确标出 **best_model**（以粗体高亮显示其名称和最优指标）。
                 4. 若 JSON 中包含特征工程相关信息，请在“特征工程说明”部分详细描述其具体方法与作用。
                 5. 输出格式：
@@ -294,6 +296,8 @@ class ModelingCodingAgent(LLMClient):
                 {result_json}
                 """.strip()
 
+        if self.code is not None:
+            prompt += f"用户使用了以下code进行建模：{self.code}”。\n\n"
         if st.session_state.preference_select:
             prompt += f"以下是用户的分析偏好设置：{st.session_state.preference_select}”。\n\n"
         if st.session_state.additional_preference:
