@@ -75,7 +75,7 @@ We are building a beginner-friendly framework that covers the end-to-end data an
 <table>
 <tr>
 <td align="center">
-  <a href="https://github.com/Jiaye-s-Group/AutoSTAT/releases/download/v1.0.0_win/AutoSTAT-1.0.0-win64.zip">
+  <a href="https://github.com/Jiaye-s-Group/AutoSTAT/releases/download/v1.0.0_win/AutoSTAT-1.0.2-win64.zip">
     <img src="https://img.shields.io/badge/Windows%20Installer-143a5f?style=for-the-badge&logo=windows&logoColor=white" />
   </a>
   <br />
@@ -83,7 +83,7 @@ We are building a beginner-friendly framework that covers the end-to-end data an
 </td>
 
 <td align="center">
-  <a href="https://github.com/Jiaye-s-Group/AutoSTAT/releases/download/v1.0.0_mac/AutoSTAT-1.0.0-mac.zip">
+  <a href="https://github.com/Jiaye-s-Group/AutoSTAT/releases/download/v1.0.0_mac/AutoSTAT-1.0.1-mac.zip">
     <img src="https://img.shields.io/badge/macOS%20Package-3f5d85?style=for-the-badge&logo=apple&logoColor=white" />
   </a>
   <br />
