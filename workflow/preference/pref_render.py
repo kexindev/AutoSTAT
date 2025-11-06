@@ -10,12 +10,9 @@ def preferences_select():
         key="modeling_requirements"
     )
     
-    # 存入 session_state
-    st.session_state.additional_preference = modeling_requirements
-    
     # 如果用户有输入（非空）
-    if modeling_requirements.strip():
-        st.chat_message("assistant").write(f"用户的需求是：{modeling_requirements}")
+    if st.session_state.additional_preference is not None:
+        st.chat_message("assistant").write(f"用户的需求是：{st.session_state.additional_preference}")
     
     col1, col2, col3 = st.columns(3)
 
@@ -71,8 +68,9 @@ def preferences_select():
         }
 
         st.success("✅ 偏好设置已保存！")
+        st.session_state.additional_preference = modeling_requirements
         st.session_state.preference_select = preferences
-
+        st.rerun()
     return preferences
 
 
