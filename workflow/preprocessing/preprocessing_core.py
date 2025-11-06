@@ -60,9 +60,18 @@ def prep_meta_execution(agent, code, df, auto=False):
                 process_df = exec_ns.get("process_df")
                 if process_df is None:
                     st.error(
-                        "脚本未写入 `process_df`。请确保编辑后的脚本在末尾赋值 process_df"
+                        "脚本未写入 `process_df`。请重新生成代码确保编辑后的脚本在末尾赋值 process_df"
                     )
+                    agent.save_error("脚本未写入 `process_df`。请重新生成代码确保编辑后的脚本在末尾赋值 process_df")
+                    prep_code_gen(agent, debug=True)
                 else:
+                    if not isinstance(process_df, pd.DataFrame):
+                        if isinstance(process_df, np.ndarray):
+                            process_df = pd.DataFrame(process_df)
+                        else:
+                            st.error(f"期望 pandas.DataFrame 或 numpy.ndarray，收到 {type(process_df)}，请重新生成代码")
+                            agent.save_error(f"期望 pandas.DataFrame 或 numpy.ndarray，收到 {type(process_df)}，请重新生成代码")
+                            prep_code_gen(agent, debug=True)
                     agent.save_processed_df(process_df)
                     agent.finish_auto()
                     st.rerun()
