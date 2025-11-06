@@ -9,8 +9,14 @@ def preferences_select():
         height=200,
         key="modeling_requirements"
     )
+    
+    # 存入 session_state
     st.session_state.additional_preference = modeling_requirements
-
+    
+    # 如果用户有输入（非空）
+    if modeling_requirements.strip():
+        st.chat_message("assistant").write(f"用户的需求是：{modeling_requirements}")
+    
     col1, col2, col3 = st.columns(3)
 
     with col1:
