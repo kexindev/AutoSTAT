@@ -124,9 +124,16 @@ def modeling_chat(agent, auto) -> None:
             "我是 Autostat 数据分析助手，很高兴为您服务！\n\n"
             "您可以在下方输入建模相关问题，或直接点击按钮获取建模建议。"
         )
-        analyze_btn = st.button("🔍 建模推荐", key='modeling_suggest')
-        result_placeholder = st.empty()
-        
+
+        c = st.columns(2)
+        with c[0]:
+            analyze_btn = st.button("🔍 建模推荐", key='modeling_suggest', use_container_width=True)
+        with c[1]:
+            clear_modeling_suggest = st.button("♻️ 清除建模分析", key='clear_modeling_suggest', use_container_width=True)
+            if clear_modeling_suggest:
+                agent.clear_memory()
+                agent.suggestion = None
+
     chat_history = agent.load_memory()
 
     for idx, entry in enumerate(chat_history):

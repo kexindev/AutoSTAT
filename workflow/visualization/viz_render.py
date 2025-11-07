@@ -80,14 +80,20 @@ def vis_result(agent) -> None:
 
 def vis_chat(agent, auto = False):
     
-    msg = st.chat_message("assistant")
-    msg.write(
-        "我是 Autostat 数据分析助手，很高兴为您服务！\n\n"
-        "您可以在下方对话框输入具体可视化需求，"
-        "也可以点击下面的按钮，一键获取可视化建议并绘图。"
-    )
-    analyze_clicked = msg.button("🔍 可视化推荐", key="viz_suggest")
-    reply_placeholder = msg.empty()
+    with st.chat_message("assistant"):
+        st.write("我是 Autostat 数据分析助手，很高兴为您服务！\n\n"
+                "您可以在下方对话框输入具体可视化需求，"
+                "也可以点击下面的按钮，一键获取可视化建议并绘图。"
+                )
+
+        c = st.columns(2)
+        with c[0]:
+            analyze_clicked = st.button("🔍 可视化推荐", key="viz_suggest", use_container_width=True)
+        with c[1]:
+            clear_viz_suggest = st.button("♻️ 清除可视化分析", key='clear_viz_suggest', use_container_width=True)
+            if clear_viz_suggest:
+                agent.clear_memory()
+                agent.suggestion = None
 
     chat_history = agent.load_memory()
 

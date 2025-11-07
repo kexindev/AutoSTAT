@@ -75,7 +75,15 @@ def prep_chat(agent, auto=False):
     with st.chat_message("assistant"):
         st.write("我是 Autostat 数据分析助手，很高兴为您服务！\n\n"
             "您可以在下方输入预处理需求，或直接点击按钮获取预处理建议。")
-        analyze_btn = st.button("🔍 预处理推荐", key='prep_suggest')
+
+        c = st.columns(2)
+        with c[0]:
+            analyze_btn = st.button("🔍 预处理推荐", key='prep_suggest', use_container_width=True)
+        with c[1]:
+            clear_prep_suggest = st.button("♻️ 清除预处理分析", key='clear_prep_suggest', use_container_width=True)
+            if clear_prep_suggest:
+                agent.clear_memory()
+                agent.preprocessing_suggestions = None
 
     # 对话历史渲染
     chat_history = agent.load_memory()
