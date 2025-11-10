@@ -85,36 +85,57 @@ def read_data_from_file(
         return df
 
     if encoding is None:
-        detected = chardet.detect(data_bytes)
-        encoding = detected.get('encoding', 'utf-8')
-    sample = data_bytes[:10_000].decode(encoding, errors='ignore')
+        det = chardet.detect(data_bytes)
+        encoding = det.get("encoding", "utf-8")
 
-    try:
-        dialect = csv.Sniffer().sniff(sample, delimiters=[',',';','\t','|'])
-        detected_sep = dialect.delimiter
+    if encoding.lower() in ("utf-16", "utf-16le", "utf-16be", 
+                            "utf-32", "utf-32le", "utf-32be"):
+        text = data_bytes.decode(encoding, errors="ignore")
+        data_bytes = text.encode("utf-8")
+        encoding = "utf-8"
+
+    sample = data_bytes[:10000].decode(encoding, errors="ignore")
+
+    first_line = sample.splitlines()[0].strip()
+
+    if sep is not None:
+        detected_sep = sep
         use_whitespace = False
-    except csv.Error:
-        detected_sep = None
-        use_whitespace = True
+
+    elif "," in first_line:
+        detected_sep = ","
+        use_whitespace = False
+
+    else:
+        try:
+            dialect = csv.Sniffer().sniff(
+                sample,
+                delimiters=[",", ";", "\t", "|"]
+            )
+            detected_sep = dialect.delimiter
+            use_whitespace = False
+        except csv.Error:
+            detected_sep = None
+            use_whitespace = True  # fallback
 
     read_kwargs = {
-        'engine': 'python',
-        'encoding': encoding,
-        'na_values': na_values,
-        'comment': '|',
-        'skipinitialspace': True,
-        'on_bad_lines': 'skip',
+        "engine": "python",
+        "encoding": encoding,
+        "na_values": na_values,
+        "skipinitialspace": True,
+        "on_bad_lines": "skip",
     }
-    if use_whitespace:
-        read_kwargs['delim_whitespace'] = True
-    else:
-        read_kwargs['sep'] = detected_sep
 
     if col_names is None:
-        read_kwargs['header'] = 0
+        read_kwargs["header"] = 0
     else:
-        read_kwargs['header'] = None
-        read_kwargs['names'] = col_names
+        read_kwargs["header"] = None
+        read_kwargs["names"] = col_names
+
+    if use_whitespace:
+        read_kwargs["delim_whitespace"] = True
+    else:
+        read_kwargs["sep"] = detected_sep
 
     return pd.read_csv(io.BytesIO(data_bytes), **read_kwargs)
 
