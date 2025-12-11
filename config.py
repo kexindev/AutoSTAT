@@ -41,6 +41,12 @@ MODEL_CONFIGS = {
         "model_name": "doubao-seed-1-6-251015",
         "api_type": "openai",  # OpenAI 兼容 API
         "is_preset": True,
+    },
+    "硅基流动": {
+        "api_base": "https://api.siliconflow.cn/v1",
+        "model_name": "deepseek-ai/DeepSeek-V3.2",
+        "api_type": "openai",  # OpenAI 兼容 API
+        "is_preset": True,
     }
 }
 
