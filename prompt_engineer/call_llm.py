@@ -9,16 +9,39 @@ from typing import List, Dict
 
 
 class LLMClient:
-    def __init__(self, model_configs: dict, api_keys: dict, model: str):
+    def __init__(self, model_configs: dict, api_keys: dict, model: str, retriever=None):
 
         self.model = model
         self.model_configs = model_configs
         self.api_keys = api_keys
+        self.retriever = retriever # Agent 内部自带检索器
         self.memory = []
         self.df = None
-
-    def call(self, prompt) -> str:
-
+        
+    def _retrieve_from_db(self, query, top_k=3):
+        """内部调用的检索逻辑"""
+        if self.retriever:
+            return self.retriever.search(query, top_k=top_k)
+        return "未连接到知识库。"
+    
+    def _build_augmented_prompt(self, context: str, prompt: str) -> str:
+        """构建最终发送给模型的消息模板"""
+        return (
+            f"你是一个专业的助手。请根据以下提供的参考资料来回答用户的问题。\n"
+            f"如果参考资料中没有相关信息，请直接说明，不要胡乱编造。\n\n"
+            f"--- 参考资料 ---\n{context}\n\n"
+            f"--- 用户问题 ---\n{prompt}\n\n"
+            f"请开始回答："
+        )
+    
+    def call(self, prompt, rag_mode=1, rag_query=None) -> str:
+        if rag_mode == 1:
+            # 内部直接使用 self.retriever，无需外部传参
+            context_str = self._retrieve_from_db(rag_query or prompt)
+            prompt = self._build_augmented_prompt(context_str, prompt)
+        #debug
+        print(prompt)
+        
         model_name = st.session_state.selected_model
         config = self.model_configs.get(model_name, {})
         api_key = self.api_keys.get(model_name)

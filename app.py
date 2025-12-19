@@ -10,6 +10,7 @@ from prompt_engineer.sec3_call_llm import VisualizationAgent
 from prompt_engineer.sec4_call_llm import ModelingCodingAgent
 from prompt_engineer.sec5_call_llm import ReportAgent
 from prompt_engineer.planner import PlannerAgent
+from prompt_engineer.RAG import get_retriever # 导入缓存函数
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -69,41 +70,64 @@ def init_session_state():
     if "from_auto" not in st.session_state:
         st.session_state.from_auto = False
 
+    # 1. 优先加载检索器（全局单例）
+    if 'retriever' not in st.session_state:
+        try:
+            st.session_state.retriever = get_retriever(
+                index_path="algo_repo/rag_index.index",
+                pkl_path="algo_repo/rag_index.pkl"
+            )
+        except Exception as e:
+            st.warning(f"RAG 检索器加载失败（可能索引未构建）: {e}")
+            st.session_state.retriever = None
+
     if 'data_loading_agent' not in st.session_state:
         st.session_state.data_loading_agent = DataLoadingAgent(
             api_keys=st.session_state.api_keys,
             model_configs=st.session_state.model_configs_runtime,
-            model=st.session_state.selected_model
+            model=st.session_state.selected_model,
+            retriever=st.session_state.retriever # 注入检索器
+
         )
     if 'data_preprocess_agent' not in st.session_state:
         st.session_state.data_preprocess_agent = DataPreprocessAgent(
             api_keys=st.session_state.api_keys,
             model_configs=st.session_state.model_configs_runtime,
-            model=st.session_state.selected_model
+            model=st.session_state.selected_model,
+            retriever=st.session_state.retriever # 注入检索器
+
         )
     if 'visualization_agent' not in st.session_state:
         st.session_state.visualization_agent = VisualizationAgent(
             api_keys=st.session_state.api_keys,
             model_configs=st.session_state.model_configs_runtime,
-            model=st.session_state.selected_model
+            model=st.session_state.selected_model,
+            retriever=st.session_state.retriever # 注入检索器
+
         )
     if 'modeling_coding_agent' not in st.session_state:
         st.session_state.modeling_coding_agent = ModelingCodingAgent(
             api_keys=st.session_state.api_keys,
             model_configs=st.session_state.model_configs_runtime,
-            model=st.session_state.selected_model
+            model=st.session_state.selected_model,
+            retriever=st.session_state.retriever # 注入检索器
+
         )
     if 'report_agent' not in st.session_state:
         st.session_state.report_agent = ReportAgent(
             api_keys=st.session_state.api_keys,
             model_configs=st.session_state.model_configs_runtime,
-            model=st.session_state.selected_model
+            model=st.session_state.selected_model,
+            retriever=st.session_state.retriever # 注入检索器
+
         )
     if 'planner_agent' not in st.session_state:
         st.session_state.planner_agent = PlannerAgent(
             api_keys=st.session_state.api_keys,
             model_configs=st.session_state.model_configs_runtime,
-            model=st.session_state.selected_model
+            model=st.session_state.selected_model,
+            retriever=st.session_state.retriever # 注入检索器
+
         )
 
 
