@@ -2,4 +2,4 @@ utils/.streamlit/
 __pycache__/
 *.py[cod]
 *.pyo
-algo_repo/
+
