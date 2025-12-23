@@ -27,7 +27,7 @@ def loading_data_file(agent):
         uploaded_files = st.file_uploader(
             "选择新文件",
             accept_multiple_files=True,
-            help="拖拽或点击上传多个文件",
+            help="拖拽或点击上传多个文件。如果上传多个格式不同的文件，可以选择分别处理。",
         )
 
         if uploaded_files:
@@ -36,13 +36,27 @@ def loading_data_file(agent):
             if new_files:
                 try:
                     with st.spinner("正在处理数据..."):
-                        df, dfs = process_complex_data(new_files, agent)
+                        df, dfs, file_names = process_complex_data(new_files, agent)
                     if df is not None:
-                        agent.add_df(df)
+                        # 保存文件信息
                         agent.save_dfs(dfs)
-                        for f in new_files:
-                            agent.save_file_name(f.name)
-                        st.rerun()
+                        # 保存文件名称列表
+                        if not hasattr(agent, 'file_names_list'):
+                            agent.file_names_list = []
+                        agent.file_names_list = file_names
+                        
+                        # 如果是单个文件，直接设置为主数据
+                        if len(dfs) == 1:
+                            agent.add_df(df)
+                            for f in new_files:
+                                agent.save_file_name(f.name)
+                            st.rerun()
+                        else:
+                            # 多个文件时，先设置第一个为默认，但会在下面让用户选择
+                            agent.add_df(df)
+                            for f in new_files:
+                                agent.save_file_name(f.name)
+                            st.rerun()
                 except Exception as err:
                     st.error(f"导入失败：{err}")
 
@@ -77,19 +91,38 @@ def loading_data_file(agent):
                         files_to_process = [PathFileWrapper(p) for p in new_paths]
                         try:
                             with st.spinner("正在处理数据..."):
-                                df, dfs = process_complex_data(files_to_process, agent)
+                                df, dfs, file_names = process_complex_data(files_to_process, agent)
                             if df is not None:
-                                agent.add_df(df)
+                                # 保存文件信息
                                 agent.save_dfs(dfs)
-                                for p in new_paths:
-                                    agent.save_file_name(p)
-                                st.rerun()
+                                # 保存文件名称列表
+                                if not hasattr(agent, 'file_names_list'):
+                                    agent.file_names_list = []
+                                agent.file_names_list = file_names
+                                
+                                # 如果是单个文件，直接设置为主数据
+                                if len(dfs) == 1:
+                                    agent.add_df(df)
+                                    for p in new_paths:
+                                        agent.save_file_name(p)
+                                    st.rerun()
+                                else:
+                                    # 多个文件时，先设置第一个为默认，但会在下面让用户选择
+                                    agent.add_df(df)
+                                    for p in new_paths:
+                                        agent.save_file_name(p)
+                                    st.rerun()
                         except Exception as err:
                             st.error(f"本地文件读取失败：{err}")
     
+    # 如果有多个文件，显示选择界面
     dfs = agent.load_dfs()
     if dfs is not None and len(dfs) >= 2:
-        load_concat_file(dfs, agent)
+        # 获取文件名称
+        file_names = None
+        if hasattr(agent, 'file_names_list') and agent.file_names_list:
+            file_names = agent.file_names_list
+        load_concat_file(dfs, agent, file_names)
 
 
 def loading_basic_info(agent):
@@ -119,10 +152,157 @@ def loading_basic_info(agent):
             st.dataframe(dtype_info, use_container_width=True)
         elif selected_index == "数据预览":
             if st.button("🎲 随机抽样"):
-                display_df = df.sample(10)
+                # 添加保护措施，防止数据行数不足10行的情况
+                sample_size = min(10, len(df))
+                if sample_size == 0:
+                    st.warning("数据为空，无法进行抽样")
+                    display_df = df
+                else:
+                    display_df = df.sample(sample_size)
                 st.dataframe(display_df, use_container_width=True)
             else:
                 st.dataframe(df.head(10), use_container_width=True)
+
+
+def loading_business_context(agent):
+    """业务背景信息收集界面"""
+    df = agent.load_df()
+    if df is None:
+        st.info("请先上传数据文件")
+        return
+
+    st.subheader("📋 业务背景信息")
+    st.caption("填写业务背景信息有助于生成更精准的分析场景和建议")
+
+    with st.expander("💼 业务背景信息", expanded=True):
+        context = agent.load_business_context() or {}
+        
+        business_scope = st.text_area(
+            "业务范围",
+            value=context.get('business_scope', ''),
+            help="描述该数据覆盖的业务范围，例如：客户交易数据、产品销售数据、用户行为数据等",
+            height=100,
+            key="business_scope_input"
+        )
+
+        data_conditions = st.text_area(
+            "数据形成条件",
+            value=context.get('data_conditions', ''),
+            help="描述数据是如何形成的，包括数据采集方式、时间范围、筛选条件等",
+            height=100,
+            key="data_conditions_input"
+        )
+
+        business_domain = st.text_input(
+            "业务领域",
+            value=context.get('business_domain', ''),
+            help="例如：电商、金融、医疗、教育等",
+            key="business_domain_input"
+        )
+
+        additional_info = st.text_area(
+            "其他背景信息（可选）",
+            value=context.get('additional_info', ''),
+            help="补充其他有助于理解数据的背景信息",
+            height=80,
+            key="additional_info_input"
+        )
+
+        if st.button("💾 保存业务背景", use_container_width=True):
+            context = {
+                'business_scope': business_scope,
+                'data_conditions': data_conditions,
+                'business_domain': business_domain,
+                'additional_info': additional_info
+            }
+            agent.save_business_context(context)
+            st.success("业务背景信息已保存！")
+
+    with st.expander("📊 数据规范与元数据（可选）", expanded=False):
+        data_metadata = st.text_area(
+            "数据规范说明",
+            value=agent.load_data_metadata() or '',
+            help="描述数据表结构规范、字段含义、数据质量标准等",
+            height=150,
+            key="data_metadata_input"
+        )
+
+        if st.button("💾 保存数据规范", use_container_width=True):
+            agent.save_data_metadata(data_metadata)
+            st.success("数据规范已保存！")
+
+
+def loading_scenario_mining(agent):
+    """场景挖掘功能界面"""
+    df = agent.load_df()
+    if df is None:
+        st.info("请先上传数据文件")
+        return
+
+    st.caption("基于数据结构和业务背景，生成可挖掘的分析场景")
+
+    col1, col2 = st.columns(2)
+    show_existing = False
+    
+    with col1:
+        generate_btn = st.button("🚀 生成挖掘场景", use_container_width=True, type="primary")
+    
+    with col2:
+        if agent.mining_scenarios:
+            show_existing = st.button("📄 查看已有场景", use_container_width=True)
+
+    if generate_btn:
+        with st.spinner("正在分析数据结构和业务背景，生成挖掘场景..."):
+            data_metadata = agent.load_data_metadata()
+            business_context = agent.load_business_context()
+            scenarios = agent.generate_mining_scenarios(df, data_metadata, business_context)
+            agent.mining_scenarios = scenarios
+
+        st.success("挖掘场景生成完成！")
+        st.markdown("---")
+        st.markdown(scenarios)
+
+    if show_existing and agent.mining_scenarios:
+        st.markdown("---")
+        st.markdown(agent.mining_scenarios)
+
+
+def loading_analysis_suggestions(agent):
+    """分析挖掘建议功能界面"""
+    df = agent.load_df()
+    if df is None:
+        st.info("请先上传数据文件")
+        return
+
+    st.caption("基于数据特征、业务背景和挖掘场景，生成系统性的分析建议")
+
+    col1, col2 = st.columns(2)
+    show_existing = False
+    
+    with col1:
+        generate_btn = st.button("🎯 生成分析建议", use_container_width=True, type="primary")
+    
+    with col2:
+        if agent.analysis_suggestions:
+            show_existing = st.button("📋 查看已有建议", use_container_width=True)
+
+    if generate_btn:
+        with st.spinner("正在生成分析挖掘建议..."):
+            data_metadata = agent.load_data_metadata()
+            business_context = agent.load_business_context()
+            mining_scenarios = agent.mining_scenarios
+            suggestions = agent.generate_analysis_suggestions(
+                df, data_metadata, business_context, mining_scenarios
+            )
+            agent.analysis_suggestions = suggestions
+
+        st.success("分析建议生成完成！")
+        st.markdown("---")
+        st.markdown(suggestions)
+
+    if show_existing and agent.analysis_suggestions:
+        st.markdown("---")
+        st.markdown(agent.analysis_suggestions)
 
 
 def loading_chat(agent, auto=False) -> None:
@@ -165,7 +345,7 @@ def loading_chat(agent, auto=False) -> None:
         st.rerun()
 
     # 用户自定义输入
-    user_input = st.chat_input("请输入需求，例如“帮我分析xx列”")
+    user_input = st.chat_input("请输入需求，例如「帮我分析xx列」")
     if user_input:
         st.chat_message("user").write(user_input)
         agent.add_memory({"role": "user", "content": user_input})
@@ -207,4 +387,17 @@ if __name__ == "__main__":
         loading_chat(agent, auto)
     with c[0].expander('数据展示', True):
         loading_basic_info(agent)
+    
+    # 新增功能区域
+    st.markdown("---")
+    st.markdown("### 🎯 智能分析规划")
+    
+    c2 = st.columns(2)
+    with c2[0].expander('业务背景信息', True):
+        loading_business_context(agent)
+    with c2[1].expander('场景挖掘', True):
+        loading_scenario_mining(agent)
+    
+    with st.expander('分析挖掘建议', True):
+        loading_analysis_suggestions(agent)
 

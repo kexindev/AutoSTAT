@@ -144,12 +144,12 @@ def process_complex_data(uploaded_files, dataloadingagent):
     """
     上传处理逻辑：
     - 单文件：当作普通表格或 MAT 文件读（第一行当表头）
-    - 多文件：若有 .names/.arff 表头文件，则用其列名；否则推断列名
-      并在存在多个数据文件时，通过用户选择进行横向或纵向拼接
+    - 多文件：分别读取每个文件，保持各自的列名和格式
+      不强制拼接，由用户在界面上选择处理方式（拼接或分别处理）
     """
     if not uploaded_files:
         st.error("请先上传文件")
-        return None, None
+        return None, None, None
 
     names_exts = ('.names', '.arff', '.doc')
     data_exts = ('.data', '.csv', '.txt', '.xlsx', '.xls', '.mat', '.arff', '.tsv', '.dat', '.tst')
@@ -161,65 +161,39 @@ def process_complex_data(uploaded_files, dataloadingagent):
 
     # 单文件直接读取
     if len(uploaded_files) == 1 and uploaded_files[0] in data_files:
-        return read_data_from_file(uploaded_files[0], col_names=None), None
+        df = read_data_from_file(uploaded_files[0], col_names=None)
+        return df, [df], [uploaded_files[0].name]
 
     if not data_files:
         raise ValueError(
             "未检测到任何数据文件，请上传支持的格式：.csv/.data/.txt/.xlsx/.xls/.mat/.arff/.tsv/.dat/.tst"
         )
 
-    # 1) 如果存在表头文件 (.names/.arff)，读取列名
-    if names_files:
-        header_file = names_files[0]
-        # 使用 read_data_from_file 读取 sample，以确保正确处理编码
-        sample_df = read_data_from_file(data_files[0], col_names=None)
-        col_names = dataloadingagent.read_names_from_file(header_file, sample_df.head())
+    # 读取所有数据文件，每个文件使用自己的列名
+    # 如果存在表头文件，只对第一个数据文件应用表头
+    dfs = []
+    file_names = []
+    
+    for idx, data_file in enumerate(data_files):
+        # 如果存在表头文件且是第一个数据文件，使用表头文件的列名
+        if names_files and idx == 0:
+            sample_df = read_data_from_file(data_file, col_names=None)
+            col_names = dataloadingagent.read_names_from_file(names_files[0], sample_df.head())
+            df = read_data_from_file(data_file, col_names=col_names)
+        else:
+            # 其他文件使用自己的列名
+            df = read_data_from_file(data_file, col_names=None)
+        
+        dfs.append(df)
+        file_names.append(data_file.name)
+
+    # 返回第一个 DataFrame 作为默认显示，所有 DataFrame 列表，以及文件名称列表
+    # 不进行自动拼接，由用户在界面上选择处理方式
+    if len(dfs) == 1:
+        return dfs[0], dfs, file_names
     else:
-        # 2) 否则从第一个数据文件推断列名，加入编码容错
-        sample = data_files[0]
-        ext0 = os.path.splitext(sample.name)[1].lower()
-        try:
-            if ext0 in ('.xlsx', '.xls'):
-                col_names = list(pd.read_excel(sample, nrows=0))
-            elif ext0 == '.mat':
-                df_sample = read_data_from_file(sample, col_names=None)
-                col_names = list(df_sample.columns)
-            else:
-                # 文本文件推断列名，带上 encoding 参数
-                # 先通过 chardet 检测，再尝试 utf-8,失败则 latin1
-                raw_bytes = sample.read()
-                detected = chardet.detect(raw_bytes)
-                enc = detected.get('encoding', 'utf-8')
-                try:
-                    col_names = list(pd.read_csv(
-                        io.BytesIO(raw_bytes),
-                        nrows=0,
-                        encoding=enc,
-                        engine='python'
-                    ).columns)
-                except UnicodeDecodeError:
-                    col_names = list(pd.read_csv(
-                        io.BytesIO(raw_bytes),
-                        nrows=0,
-                        encoding='latin1',
-                        engine='python'
-                    ).columns)
-        finally:
-            try: sample.seek(0)
-            except: pass
-
-    # 读取所有数据文件并统一列名
-    dfs = [read_data_from_file(f, col_names=col_names) for f in data_files]
-
-    # 若多个数据文件，弹出拼接模式选择
-    if len(data_files) >= 2:
-
-        big_df = pd.concat(dfs, axis=0, ignore_index=True)
-
-    else:
-        big_df = dfs[0]
-
-    return big_df, dfs
+        # 多个文件时，返回第一个文件作为默认，但保留所有文件供用户选择
+        return dfs[0], dfs, file_names
 
 
 def load_from_path(local_path):
@@ -252,41 +226,138 @@ def load_from_path(local_path):
     return df_local
 
 
-def load_concat_file(dfs, agent):
-
+def load_concat_file(dfs, agent, file_names=None):
+    """
+    处理多个数据文件的选择界面
+    - 拼接：横向或纵向拼接
+    - 分别处理：选择使用哪个文件
+    """
+    if file_names is None:
+        file_names = [f"文件 {i+1}" for i in range(len(dfs))]
+    
+    st.info(f"检测到 {len(dfs)} 个数据文件，请选择处理方式：")
+    
+    # 显示文件信息
+    with st.expander("📁 查看文件信息", expanded=False):
+        for idx, (df, name) in enumerate(zip(dfs, file_names)):
+            st.write(f"**{name}**: {df.shape[0]} 行 × {df.shape[1]} 列")
+            # 安全地处理列名显示，防止类型错误
+            try:
+                columns_list = df.columns.tolist() if hasattr(df.columns, 'tolist') else list(df.columns)
+                displayed_columns = ', '.join(columns_list[:5]) if columns_list else ''
+                st.write(f"列名: {displayed_columns}{'...' if len(columns_list) > 5 else ''}")
+            except Exception as e:
+                st.write(f"列名显示错误: {str(e)}")
+            if idx < len(dfs) - 1:
+                st.divider()
+    
+    # 使用 session_state 来跟踪处理模式
+    mode_key = f"concat_mode_{id(dfs)}"
+    if mode_key not in st.session_state:
+        st.session_state[mode_key] = 0  # 默认选择"分别处理"
+    
     mode = sac.segmented(
         items=[
+            sac.SegmentedItem(label='分别处理'),
             sac.SegmentedItem(label='纵向拼接'),
             sac.SegmentedItem(label='横向拼接'),
-        ], label='检测到多个数据文件，请选择拼接方式', size='sm', radius='sm'
+        ], 
+        label='选择处理方式', 
+        size='sm', 
+        radius='sm', 
+        index=st.session_state[mode_key]
     )
+    
+    # 更新 session_state 以跟踪当前选择
+    if mode == '分别处理':
+        st.session_state[mode_key] = 0
+    elif mode == '纵向拼接':
+        st.session_state[mode_key] = 1
+    elif mode == '横向拼接':
+        st.session_state[mode_key] = 2
 
-    if mode.startswith("横向拼接"):
-        dfs_pos = [df.reset_index(drop=True) for df in dfs]
-        big_df = pd.concat(dfs_pos, axis=1)
+    if mode == '分别处理' or (isinstance(mode, str) and mode.startswith("分别处理")):
+        # 让用户选择使用哪个文件
+        select_key = f"select_file_idx_{id(dfs)}"
+        
+        # 使用 key 参数时，Streamlit 会自动管理 session_state，不需要手动更新
+        selected_idx = st.selectbox(
+            "选择要使用的数据文件",
+            options=range(len(dfs)),
+            format_func=lambda x: f"{file_names[x]} ({dfs[x].shape[0]} 行 × {dfs[x].shape[1]} 列)",
+            index=0,  # 默认选择第一个文件
+            key=select_key
+        )
+        
+        selected_df = dfs[selected_idx]
+        agent.add_df(selected_df)
+        st.success(f"已选择使用：{file_names[selected_idx]}")
+        
+    elif mode == '横向拼接' or (isinstance(mode, str) and mode.startswith("横向拼接")):
+        # 横向拼接：要求行数相同
+        try:
+            dfs_pos = [df.reset_index(drop=True) for df in dfs]
+            big_df = pd.concat(dfs_pos, axis=1)
+            
+            # 处理重复列名
+            cols = []
+            seen = {}
+            for c in big_df.columns:
+                if c in seen:
+                    seen[c] += 1
+                    cols.append(f"{c}_{seen[c]}")
+                else:
+                    seen[c] = 0
+                    cols.append(c)
+            big_df.columns = cols
+            agent.add_df(big_df)
+            st.success(f"横向拼接完成：{big_df.shape[0]} 行 × {big_df.shape[1]} 列")
+        except Exception as e:
+            st.error(f"横向拼接失败：{str(e)}。请确保所有文件的行数相同。")
+            return
+            
+    else:  # 纵向拼接
+        # 纵向拼接：要求列名相同或兼容
+        try:
+            big_df = pd.concat(dfs, axis=0, ignore_index=True)
+            agent.add_df(big_df)
+            st.success(f"纵向拼接完成：{big_df.shape[0]} 行 × {big_df.shape[1]} 列")
+        except Exception as e:
+            st.warning(f"纵向拼接时出现警告：{str(e)}。尝试统一列名后拼接...")
+            # 尝试统一列名后拼接
+            try:
+                # 获取所有列名的并集
+                all_cols = set()
+                for df in dfs:
+                    all_cols.update(df.columns)
+                all_cols = sorted(list(all_cols))
+                
+                # 为每个 DataFrame 添加缺失的列
+                dfs_aligned = []
+                for df in dfs:
+                    df_aligned = df.copy()
+                    for col in all_cols:
+                        if col not in df_aligned.columns:
+                            df_aligned[col] = None
+                    dfs_aligned.append(df_aligned[all_cols])
+                
+                big_df = pd.concat(dfs_aligned, axis=0, ignore_index=True)
+                agent.add_df(big_df)
+                st.success(f"纵向拼接完成（已统一列名）：{big_df.shape[0]} 行 × {big_df.shape[1]} 列")
+            except Exception as e2:
+                st.error(f"纵向拼接失败：{str(e2)}。建议使用「分别处理」选项。")
+                return
 
-        cols = []
-        seen = {}
-        for c in big_df.columns:
-            if c in seen:
-                seen[c] += 1
-                cols.append(f"{c}_{seen[c]}")
-            else:
-                seen[c] = 0
-                cols.append(c)
-        big_df.columns = cols
-        agent.add_df(big_df)
-    else:
-        big_df = pd.concat(dfs, axis=0, ignore_index=True)
-        agent.add_df(big_df)
-
-    csv_bytes = big_df.to_csv(index=False).encode('utf-8')
-    st.download_button(
-    label="下载文件",
-    data=csv_bytes,
-    file_name="processed_data.csv",
-    mime="text/csv"
-    )
+    # 下载按钮
+    current_df = agent.load_df()
+    if current_df is not None:
+        csv_bytes = current_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="下载处理后的文件",
+            data=csv_bytes,
+            file_name="processed_data.csv",
+            mime="text/csv"
+        )
 
 
 class PathFileWrapper:

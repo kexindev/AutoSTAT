@@ -18,6 +18,10 @@ class DataLoadingAgent(LLMClient):
         self.abstract=None
         self.full = None
         self.finish_auto_task = False
+        self.data_metadata = None  # 数据元数据（表结构、数据规范）
+        self.business_context = None  # 业务背景信息
+        self.mining_scenarios = None  # 可挖掘场景
+        self.analysis_suggestions = None  # 分析挖掘建议
 
 
     def finish_auto(self):
@@ -247,3 +251,189 @@ class DataLoadingAgent(LLMClient):
             )
 
         return self.full
+
+    def save_data_metadata(self, metadata):
+        """保存数据元数据（表结构、数据规范）"""
+        self.data_metadata = metadata
+
+    def load_data_metadata(self):
+        """加载数据元数据"""
+        return self.data_metadata
+
+    def save_business_context(self, context):
+        """保存业务背景信息（业务范围、形成数据的条件）"""
+        self.business_context = context
+
+    def load_business_context(self):
+        """加载业务背景信息"""
+        return self.business_context
+
+    def generate_mining_scenarios(self, df, data_metadata=None, business_context=None):
+        """
+        基于数据表结构、数据规范和业务背景，生成可挖掘场景
+        
+        Args:
+            df: 数据DataFrame
+            data_metadata: 数据元数据（表结构、数据规范）
+            business_context: 业务背景信息（业务范围、形成数据的条件）
+        """
+        # 构建数据结构信息
+        schema_info = {
+            "dimensions": f"{df.shape[0]} 行 × {df.shape[1]} 列",
+            "columns": dict(zip(df.columns.tolist(), df.dtypes.astype(str).tolist())),
+            "sample_data": df.head().to_dict(orient='list'),
+            "statistics": {
+                col: {
+                    "null_count": int(df[col].isnull().sum()),
+                    "null_percentage": float(df[col].isnull().mean() * 100),
+                    "unique_count": int(df[col].nunique()),
+                    "dtype": str(df[col].dtype)
+                }
+                for col in df.columns
+            }
+        }
+
+        prompt = (
+            "你是一名资深的数据挖掘专家，擅长基于数据特征和业务背景识别潜在的分析场景。\n\n"
+            f"【数据表结构信息】\n"
+            f"- 数据维度：{schema_info['dimensions']}\n"
+            f"- 列名和数据类型：{schema_info['columns']}\n"
+            f"- 数据统计信息：{schema_info['statistics']}\n"
+            f"- 前5行样本数据：{schema_info['sample_data']}\n\n"
+        )
+
+        if data_metadata:
+            prompt += f"【数据规范与元数据】\n{data_metadata}\n\n"
+
+        if business_context:
+            prompt += f"【业务背景信息】\n"
+            if isinstance(business_context, dict):
+                if business_context.get('business_scope'):
+                    prompt += f"- 业务范围：{business_context['business_scope']}\n"
+                if business_context.get('data_conditions'):
+                    prompt += f"- 数据形成条件：{business_context['data_conditions']}\n"
+                if business_context.get('business_domain'):
+                    prompt += f"- 业务领域：{business_context['business_domain']}\n"
+                if business_context.get('additional_info'):
+                    prompt += f"- 其他背景信息：{business_context['additional_info']}\n"
+            else:
+                prompt += f"{business_context}\n"
+            prompt += "\n"
+
+        prompt += """
+        请基于以上信息，系统性地识别和生成该数据集的可挖掘场景。要求：
+
+        1. **场景识别**：识别3-8个具有实际价值的分析挖掘场景
+           - 每个场景应明确说明分析目标
+           - 说明该场景的业务价值或研究意义
+           - 指出实现该场景所需的关键字段和分析方法
+
+        2. **场景分类**：将场景按以下维度分类：
+           - 描述性分析场景（如分布分析、趋势分析）
+           - 关联性分析场景（如相关性分析、关联规则挖掘）
+           - 预测性分析场景（如分类、回归、时间序列预测）
+           - 异常检测场景（如离群点检测、异常模式识别）
+           - 聚类分析场景（如客户分群、行为模式识别）
+
+        3. **优先级评估**：为每个场景标注优先级（高/中/低），并说明理由
+
+        4. **可行性分析**：评估每个场景的数据充分性和技术可行性
+
+        输出格式要求：
+        - 使用清晰的分级结构（一、二、三级标题）
+        - 每个场景独立成段，包含：场景名称、分析目标、业务价值、关键字段、分析方法、优先级、可行性
+        - 使用专业但易懂的语言
+        - 避免模糊表述，给出具体建议
+        """
+
+        scenarios = self.call(prompt)
+        self.mining_scenarios = scenarios
+        return scenarios
+
+    def generate_analysis_suggestions(self, df, data_metadata=None, business_context=None, mining_scenarios=None):
+        """
+        基于数据表结构、业务背景和挖掘场景，生成分析挖掘建议
+        
+        Args:
+            df: 数据DataFrame
+            data_metadata: 数据元数据
+            business_context: 业务背景信息
+            mining_scenarios: 已生成的挖掘场景（可选）
+        """
+        # 构建数据结构信息
+        schema_info = {
+            "dimensions": f"{df.shape[0]} 行 × {df.shape[1]} 列",
+            "columns": dict(zip(df.columns.tolist(), df.dtypes.astype(str).tolist())),
+            "sample_data": df.head().to_dict(orient='list'),
+        }
+
+        prompt = (
+            "你是一名资深的数据分析顾问，擅长为数据分析项目提供系统性的分析挖掘建议。\n\n"
+            f"【数据表结构信息】\n"
+            f"- 数据维度：{schema_info['dimensions']}\n"
+            f"- 列名和数据类型：{schema_info['columns']}\n"
+            f"- 前5行样本数据：{schema_info['sample_data']}\n\n"
+        )
+
+        if data_metadata:
+            prompt += f"【数据规范与元数据】\n{data_metadata}\n\n"
+
+        if business_context:
+            prompt += f"【业务背景信息】\n"
+            if isinstance(business_context, dict):
+                if business_context.get('business_scope'):
+                    prompt += f"- 业务范围：{business_context['business_scope']}\n"
+                if business_context.get('data_conditions'):
+                    prompt += f"- 数据形成条件：{business_context['data_conditions']}\n"
+                if business_context.get('business_domain'):
+                    prompt += f"- 业务领域：{business_context['business_domain']}\n"
+            else:
+                prompt += f"{business_context}\n"
+            prompt += "\n"
+
+        if mining_scenarios:
+            prompt += f"【已识别的挖掘场景】\n{mining_scenarios}\n\n"
+
+        prompt += """
+        请基于以上信息，提供系统性的分析挖掘建议。要求：
+
+        1. **分析路径建议**：
+           - 建议的分析流程和步骤顺序
+           - 每个步骤的目标和预期产出
+           - 步骤之间的依赖关系
+
+        2. **技术方法建议**：
+           - 推荐使用的统计方法、机器学习算法或数据挖掘技术
+           - 说明选择该方法的原因和适用场景
+           - 指出方法实施的技术要求和注意事项
+
+        3. **数据预处理建议**：
+           - 针对当前数据特点的预处理需求
+           - 缺失值、异常值、重复值的处理策略
+           - 特征工程建议（如特征选择、特征变换、特征构造）
+
+        4. **分析深度建议**：
+           - 建议的分析深度和详细程度
+           - 关键指标和评估标准
+           - 结果解释和可视化建议
+
+        5. **风险与注意事项**：
+           - 可能遇到的数据质量问题
+           - 分析方法选择的限制和风险
+           - 结果解释的注意事项
+
+        6. **实施优先级**：
+           - 建议优先实施的分析任务
+           - 各任务的预期价值和投入产出比
+           - 分阶段实施建议
+
+        输出格式要求：
+        - 使用清晰的分级结构
+        - 每个建议独立成段，包含：建议内容、理由说明、实施要点、预期效果
+        - 使用专业但易懂的语言
+        - 给出具体可操作的建议，避免空泛描述
+        """
+
+        suggestions = self.call(prompt)
+        self.analysis_suggestions = suggestions
+        return suggestions

@@ -24,7 +24,7 @@ def infer_load_data(agent) -> None:
     if uploaded_files:
         try:
             with st.spinner("正在处理数据..."):
-                big_df, dfs = process_complex_data(uploaded_files, agent)
+                big_df, dfs, file_names = process_complex_data(uploaded_files, agent)
             if big_df is not None:
                 agent.save_inference_data(big_df)
                 st.success("导入并处理完成！")
