@@ -78,7 +78,7 @@ def prep_chat(agent):
     """渲染对话式建议区"""
 
     with st.chat_message("assistant"):
-        st.write("我是 Autostat 自动模式决策助手，很高兴为您服务！\n\n"
+        st.write("我是自动模式决策助手，很高兴为您服务！\n\n"
             "您可以在左侧边栏开启自动模式，我会协助您决策并一键完成所有分析")
 
     if agent.plan is not None:

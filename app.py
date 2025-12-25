@@ -293,10 +293,10 @@ def run_app():
                     )
                     st.rerun()
 
-        st.image(
-            "logo/logo_big.png",
-            use_container_width=True
-        )
+        # st.image(
+        #     "logo/logo_big.png",
+        #     use_container_width=True
+        # )
 
     # Define pages
     preference = st.Page(

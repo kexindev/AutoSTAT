@@ -19,7 +19,7 @@ def loading_data_file(agent):
 
     selected_index = sac.tabs([
         sac.TabsItem(label='本地上传'),
-        sac.TabsItem(label='路径导入'),
+        # sac.TabsItem(label='路径导入'),
     ], color='#5980AE',)
 
     if selected_index == "本地上传":
@@ -313,7 +313,7 @@ def loading_chat(agent, auto=False) -> None:
 
     with st.chat_message("assistant"):
         st.write(
-            "我是 Autostat 数据分析助手，很高兴为您服务！\n\n"
+            "我是您的数据分析助手，很高兴为您服务！\n\n"
             "请先上传您的数据文件，上传完成后，您可以在下方和我对话，也可以直接点击按钮解析数据含义。"
         )
         analyze_btn = st.button("🔍 解析含义")
@@ -374,10 +374,10 @@ if __name__ == "__main__":
     with c2:
         st.write("")  
         st.write("")  
-        sac.buttons([
-            sac.ButtonsItem(label='Github', icon='github', href='https://github.com/Automated-Statistician/AutoSTAT'),
-            sac.ButtonsItem(label='Doc', icon=sac.BsIcon(name='bi bi-file-earmark-post-fill', size=16), href='https://automated-statistician.github.io/autostatdoc.github.io/'),
-        ], align='end', color='dark', variant='filled', index=None)
+        # sac.buttons([
+        #     sac.ButtonsItem(label='Github', icon='github', href='https://github.com/Automated-Statistician/AutoSTAT'),
+        #     sac.ButtonsItem(label='Doc', icon=sac.BsIcon(name='bi bi-file-earmark-post-fill', size=16), href='https://automated-statistician.github.io/autostatdoc.github.io/'),
+        # ], align='end', color='dark', variant='filled', index=None)
     st.markdown("---")
 
     c = st.columns(2)

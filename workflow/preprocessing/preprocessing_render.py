@@ -73,7 +73,7 @@ def prep_chat(agent, auto=False):
     """渲染对话式建议区"""
 
     with st.chat_message("assistant"):
-        st.write("我是 Autostat 数据分析助手，很高兴为您服务！\n\n"
+        st.write("我是您的数据分析助手，很高兴为您服务！\n\n"
             "您可以在下方输入预处理需求，或直接点击按钮获取预处理建议。")
 
         c = st.columns(2)

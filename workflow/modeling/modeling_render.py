@@ -121,7 +121,7 @@ def modeling_chat(agent, auto) -> None:
 
     with st.chat_message("assistant"):
         st.write(
-            "我是 Autostat 数据分析助手，很高兴为您服务！\n\n"
+            "我是您的数据分析助手，很高兴为您服务！\n\n"
             "您可以在下方输入建模相关问题，或直接点击按钮获取建模建议。"
         )
 

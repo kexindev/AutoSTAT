@@ -81,7 +81,7 @@ def vis_result(agent) -> None:
 def vis_chat(agent, auto = False):
     
     with st.chat_message("assistant"):
-        st.write("我是 Autostat 数据分析助手，很高兴为您服务！\n\n"
+        st.write("我是您的数据分析助手，很高兴为您服务！\n\n"
                 "您可以在下方对话框输入具体可视化需求，"
                 "也可以点击下面的按钮，一键获取可视化建议并绘图。"
                 )
