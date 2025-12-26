@@ -389,15 +389,15 @@ if __name__ == "__main__":
         loading_basic_info(agent)
     
     # 新增功能区域
-    st.markdown("---")
-    st.markdown("### 🎯 智能分析规划")
-    
-    c2 = st.columns(2)
-    with c2[0].expander('业务背景信息', True):
-        loading_business_context(agent)
-    with c2[1].expander('场景挖掘', True):
-        loading_scenario_mining(agent)
-    
-    with st.expander('分析挖掘建议', True):
-        loading_analysis_suggestions(agent)
+    # st.markdown("---")
+    # st.markdown("### 🎯 智能分析规划")
+    # 
+    # c2 = st.columns(2)
+    # with c2[0].expander('业务背景信息', True):
+    #     loading_business_context(agent)
+    # with c2[1].expander('场景挖掘', True):
+    #     loading_scenario_mining(agent)
+    # 
+    # with st.expander('分析挖掘建议', True):
+    #     loading_analysis_suggestions(agent)
 
